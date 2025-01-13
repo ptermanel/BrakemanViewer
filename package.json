@@ -1,0 +1,13 @@
+{
+  "name": "brakeman-json-viewer",
+  "version": "1.0.0",
+  "description": "A basic web application for uploading and visualizing Brakeman JSON reports",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.4"
+  }
+}
