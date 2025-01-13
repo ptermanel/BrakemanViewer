@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brakeman JSON Viewer</title>
+  <style>
+    /* Styles for normal display */
+    .print-hidden {
+      display: block; /* Display by default */
+    }
+
+    /* Styles for print media */
+    @media print {
+      .print-hidden {
+        display: none; /* Hide when printing */
+      }
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-sizing: border-box;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #brakemanFile {
+      margin-bottom: 20px;/* Styles for normal display */
+    .print-hidden {
+      display: block; /* Display by default */
+    }
+
+    /* Styles for print media */
+    @media print {
+      .print-hidden {
+        display: none; /* Hide when printing */
+      }
+    }
+    }
+
+    #output {
+      margin-top: 20px;
+      border-top: 1px solid #ddd;
+      padding-top: 20px;
+    }/* Styles for normal display */
+    .print-hidden {
+      display: block; /* Display by default */
+    }
+
+    /* Styles for print media */
+    @media print {
+      .print-hidden {
+        display: none; /* Hide when printing */
+      }
+    }
+
+    .vulnerability {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+    }
+
+    .vulnerability p {
+      margin: 5px 0;
+    }
+
+    .vulnerability strong {
+      font-weight: bold;
+    }
+
+    .overview-info {
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+    }
+    .overview-info p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Vulnerabilities</h1>
+    <input type="file" id="brakemanFile" class="print-hidden">
+    <div id="overview" class="overview-info">
+      <h2>Overview</h2>
+      <p><strong>Total Vulnerabilities:</strong> <span id="totalVulnerabilities"></span></p>
+    </div>
+    <div id="chartContainer" class="chart-container">
+      <canvas id="severityChart" width="200" height="100"></canvas>
+    </div>
+    <div id="output"></div>
+  </div>
+  <script>
+    document.getElementById('brakemanFile').addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const json = JSON.parse(content);
+        displayOverview(json);
+        displayChart(json);
+        displayReport(json);
+      };
+
+      reader.readAsText(file);
+    });
+
+    function displayReport(report) {
+      const outputDiv = document.getElementById('output');
+      outputDiv.innerHTML = '';
+      console.log(report)
+      report.vulnerabilities.forEach(vulnerability => {
+        const vulnerabilityDiv = document.createElement('div');
+        vulnerabilityDiv.classList.add('vulnerability');
+        vulnerabilityDiv.classList.add( getSeverityClass(vulnerability.severity) );
+        vulnerabilityDiv.innerHTML = `
+          <p><strong>File:</strong> ${vulnerability.location.file}</p>
+          <p><strong>Line:</strong> ${vulnerability.location.start_line}</p>
+          <p><strong>Severity:</strong> ${vulnerability.severity}</p>
+          <p><strong>Description:</strong> ${vulnerability.name}</p>
+          <p><strong>Detail:</strong> ${JSON.stringify(vulnerability.location, null, 2)}</p>
+        `;
+        outputDiv.appendChild(vulnerabilityDiv);
+      });
+    }
+
+    function displayOverview(data) {
+      // Display overview statistics
+      document.getElementById('totalVulnerabilities').textContent = data.vulnerabilities.length;
+
+      const severitiesNames = [...new Set(data.vulnerabilities.map(obj => obj.severity))];
+
+      const overview = document.getElementById('overview');
+      severitiesNames.forEach( severity => {
+        const severityCount = data.vulnerabilities.filter(vuln => vuln.severity === severity).length;
+        const severityDiv = document.createElement('p');
+                
+        severityDiv.innerHTML = `<strong>${severity} Severity:</strong> <span id="criticalSeverity">${severityCount}</span>`;
+        overview.append( severityDiv );
+      });
+       
+    }
+
+    function getSeverityClass(severity) {
+      // Helper function to determine CSS class based on severity
+      switch (severity) {
+        case 'Critical':
+          return 'critical-severity';
+        case 'High':
+          return 'high-severity';
+        case 'Medium':
+          return 'medium-severity';
+        case 'Low':
+          return 'low-severity';
+        default:
+          return '';
+      }
+    }
+
+    function displayChart(data) {
+      const ctx = document.getElementById('severityChart').getContext('2d');
+
+      const severitiesNames = [...new Set(data.vulnerabilities.map(obj => obj.severity))];
+      const severitiesCounts = [];
+      severitiesNames.forEach( severity => {
+        const severityCount = data.vulnerabilities.filter(vuln => vuln.severity === severity ).length;
+        severitiesCounts.push( severityCount );
+      });
+
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: severitiesNames,
+          datasets: [{
+            label: 'Vulnerabilities by Severity',
+            data: severitiesCounts,
+            backgroundColor: [
+              'rgba(255, 0, 0, 0.7)',
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 206, 86, 0.7)'
+            ],
+            borderColor: [
+              'rgba(255, 0, 0, 1)',
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          legend: {
+            display: false
+          },
+          scales: {
+            yAxes: [{
+              ticks: {
+                beginAtZero: true
+              }
+            }]
+          }
+        }
+      });
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>
